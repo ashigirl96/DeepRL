@@ -8,7 +8,10 @@ import numpy as np
 
 
 class RandomProcess(object):
-    def reset_states(self):
+    def reset_states(self) -> None:
+        pass
+
+    def sample(self) -> np.ndarray:
         pass
 
 

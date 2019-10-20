@@ -4,8 +4,21 @@
 # declaration at the top                                              #
 #######################################################################
 from .normalizer import *
+from ..component import *
 import argparse
 import torch
+from ..network import *
+from typing import Callable, Optional, Union
+
+TNetwork = Optional[torch.nn.Module]
+TTask = Optional[Task]
+TOptimizer = Optional[torch.optim.Optimizer]
+TRandomProcess = Optional[RandomProcess]
+
+TNetworkFn = Optional[Callable[[], Union[TNetwork, BaseNet]]]
+TOptimizerFn = Optional[Callable[[], TOptimizer]]
+TTaskFn = Optional[Callable[[], TTask]]
+TRandomProcessFn = Optional[Callable[[], TRandomProcess]]
 
 
 class Config:
@@ -13,15 +26,15 @@ class Config:
 
     def __init__(self):
         self.parser = argparse.ArgumentParser()
-        self.task_fn = None
-        self.optimizer_fn = None
-        self.actor_optimizer_fn = None
-        self.critic_optimizer_fn = None
-        self.network_fn = None
-        self.actor_network_fn = None
-        self.critic_network_fn = None
+        self.task_fn = None  # type: TTaskFn
+        self.optimizer_fn = None  # type: TOptimizerFn
+        self.actor_optimizer_fn = None  # type: TOptimizerFn
+        self.critic_optimizer_fn = None  # type: TOptimizerFn
+        self.network_fn = None  # type: TNetworkFn
+        self.actor_network_fn = None  # type: TNetworkFn
+        self.critic_network_fn = None  # type: TNetworkFn
         self.replay_fn = None
-        self.random_process_fn = None
+        self.random_process_fn = None # type: TRandomProcessFn
         self.discount = None
         self.target_network_update_freq = None
         self.exploration_steps = None
@@ -58,6 +71,8 @@ class Config:
         self.eval_episodes = 10
         self.async_actor = True
         self.tasks = False
+
+        self.warm_up = 0
 
     @property
     def eval_env(self):

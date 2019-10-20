@@ -9,10 +9,28 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from ..utils import *
+from typing import Optional
+
+Tensor = Optional[torch.Tensor]
 
 
 class BaseNet:
     def __init__(self):
+        pass
+
+    def forward(self, x) -> Tensor:
+        pass
+
+    def feature(self, obs) -> Tensor:
+        pass
+
+    def actor(self, phi) -> Tensor:
+        pass
+
+    def critic(self, phi, a) -> Tensor:
+        pass
+
+    def q(self, obs, a) -> Tensor:
         pass
 
 

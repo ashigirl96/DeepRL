@@ -22,6 +22,14 @@ try:
 except ImportError:
     pass
 
+from typing import Optional, Tuple, Dict
+
+TState = Optional[np.ndarray]
+TReward = Optional[np.ndarray, np.int32, np.float32]
+TTerminal = Optional[np.ndarray, bool]
+TInfo = Optional[Dict]
+TStep = Tuple[TState, TReward, TTerminal, TInfo]
+
 
 # adapted from https://github.com/ikostrikov/pytorch-a2c-ppo-acktr/blob/master/envs.py
 def make_env(env_id, seed, rank, episode_life=True):
@@ -178,10 +186,10 @@ class Task:
         else:
             assert 'unknown action space'
 
-    def reset(self):
+    def reset(self) -> TState:
         return self.env.reset()
 
-    def step(self, actions):
+    def step(self, actions) -> TStep:
         if isinstance(self.action_space, Box):
             actions = np.clip(actions, self.action_space.low, self.action_space.high)
         return self.env.step(actions)
