@@ -19,6 +19,7 @@ TNetworkFn = Optional[Callable[[], Union[TNetwork, BaseNet]]]
 TOptimizerFn = Optional[Callable[[], TOptimizer]]
 TTaskFn = Optional[Callable[[], TTask]]
 TRandomProcessFn = Optional[Callable[[], TRandomProcess]]
+Game = Optional[str]
 
 
 class Config:
@@ -71,8 +72,15 @@ class Config:
         self.eval_episodes = 10
         self.async_actor = True
         self.tasks = False
+        self.game = None  # type: Game
 
         self.warm_up = 0
+
+        self.td3_noise = 0
+        self.td3_noise_clip = 0
+        self.td3_delay = 0
+
+        self.sac_coef = 0
 
     @property
     def eval_env(self):
