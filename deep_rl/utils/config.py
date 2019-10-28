@@ -15,7 +15,7 @@ TTask = Optional[Task]
 TOptimizer = Optional[torch.optim.Optimizer]
 TRandomProcess = Optional[RandomProcess]
 
-TNetworkFn = Optional[Callable[[], Union[TNetwork, BaseNet]]]
+TNetworkFn = Optional[Callable[[], Union[TNetwork]]]
 TOptimizerFn = Optional[Callable[[], TOptimizer]]
 TTaskFn = Optional[Callable[[], TTask]]
 TRandomProcessFn = Optional[Callable[[], TRandomProcess]]

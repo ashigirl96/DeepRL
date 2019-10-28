@@ -5,6 +5,7 @@
 #######################################################################
 
 from deep_rl import *
+from deep_rl.utils.config import Config
 
 
 # DQN

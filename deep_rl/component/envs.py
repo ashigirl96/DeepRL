@@ -16,17 +16,18 @@ from baselines.common.atari_wrappers import FrameStack as FrameStack_
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv, VecEnv
 
 from ..utils import *
+from ..utils.misc import random_seed
 
 try:
     import roboschool
 except ImportError:
     pass
 
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Union
 
 TState = Optional[np.ndarray]
-TReward = Optional[np.ndarray, np.int32, np.float32]
-TTerminal = Optional[np.ndarray, bool]
+TReward = Optional[Union[np.ndarray, np.int32, np.float32]]
+TTerminal = Optional[Union[np.ndarray, bool]]
 TInfo = Optional[Dict]
 TStep = Tuple[TState, TReward, TTerminal, TInfo]
 

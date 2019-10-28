@@ -10,6 +10,7 @@ import os
 
 
 def select_device(gpu_id):
+    from .config import Config
     # if torch.cuda.is_available() and gpu_id >= 0:
     if gpu_id >= 0:
         Config.DEVICE = torch.device('cuda:%d' % (gpu_id))
@@ -18,6 +19,7 @@ def select_device(gpu_id):
 
 
 def tensor(x):
+    from .config import Config
     if isinstance(x, torch.Tensor):
         return x
     x = np.asarray(x, dtype=np.float)
@@ -26,6 +28,7 @@ def tensor(x):
 
 
 def range_tensor(end):
+    from .config import Config
     return torch.arange(end).long().to(Config.DEVICE)
 
 
