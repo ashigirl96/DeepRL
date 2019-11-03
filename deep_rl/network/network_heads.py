@@ -117,7 +117,7 @@ class DeterministicActorCriticNet(nn.Module, BaseNet):
         self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters())
         self.critic_params = list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
         self.phi_params = list(self.phi_body.parameters())
-        
+
         self.actor_opt = actor_opt_fn(self.actor_params + self.phi_params)
         self.critic_opt = critic_opt_fn(self.critic_params + self.phi_params)
         self.to(Config.DEVICE)
@@ -158,7 +158,7 @@ class GaussianActorCriticNet(nn.Module, BaseNet):
         self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters())
         self.critic_params = list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
         self.phi_params = list(self.phi_body.parameters())
-        
+
         self.std = nn.Parameter(torch.zeros(action_dim))
         self.to(Config.DEVICE)
 
@@ -201,7 +201,7 @@ class CategoricalActorCriticNet(nn.Module, BaseNet):
         self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters())
         self.critic_params = list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
         self.phi_params = list(self.phi_body.parameters())
-        
+
         self.to(Config.DEVICE)
 
     def forward(self, obs, action=None):
@@ -240,7 +240,7 @@ class TD3Net(nn.Module, BaseNet):
         self.fc_critic_2 = layer_init(nn.Linear(self.critic_body_2.feature_dim, 1), 1e-3)
 
         self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters())
-        self.critic_params = list(self.critic_body_1.parameters()) + list(self.fc_critic_1.parameters()) +\
+        self.critic_params = list(self.critic_body_1.parameters()) + list(self.fc_critic_1.parameters()) + \
                              list(self.critic_body_2.parameters()) + list(self.fc_critic_2.parameters())
 
         self.actor_opt = actor_opt_fn(self.actor_params)
@@ -250,6 +250,70 @@ class TD3Net(nn.Module, BaseNet):
     def forward(self, obs):
         obs = tensor(obs)
         return torch.tanh(self.fc_action(self.actor_body(obs)))
+
+    def q(self, obs, a):
+        obs = tensor(obs)
+        a = tensor(a)
+        x = torch.cat([obs, a], dim=1)
+        q_1 = self.fc_critic_1(self.critic_body_1(x))
+        q_2 = self.fc_critic_2(self.critic_body_2(x))
+        return q_1, q_2
+
+
+class SACNet(nn.Module, BaseNet):
+    EPS = 1e-6
+    LOG_STD_MAX = 2
+    LOG_STD_MIN = -20
+
+    def __init__(self,
+                 action_dim,
+                 actor_body_fn,
+                 critic_body_fn,
+                 actor_opt_fn,
+                 critic_opt_fn,
+                 ):
+        super(SACNet, self).__init__()
+        self.actor_body = actor_body_fn()
+        self.critic_body_1 = critic_body_fn()
+        self.critic_body_2 = critic_body_fn()
+
+        self.fc_action = layer_init(nn.Linear(self.actor_body.feature_dim, action_dim), 1e-3)
+        self.fc_log_std = layer_init(nn.Linear(self.actor_body.feature_dim, action_dim), 1e-3)
+        self.fc_critic_1 = layer_init(nn.Linear(self.critic_body_1.feature_dim, 1), 1e-3)
+        self.fc_critic_2 = layer_init(nn.Linear(self.critic_body_2.feature_dim, 1), 1e-3)
+
+        self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters()) + list(self.fc_log_std.parameters())
+        self.critic_params = list(self.critic_body_1.parameters()) + list(self.fc_critic_1.parameters()) + \
+                             list(self.critic_body_2.parameters()) + list(self.fc_critic_2.parameters())
+
+        self.actor_opt = actor_opt_fn(self.actor_params)
+        self.critic_opt = critic_opt_fn(self.critic_params)
+        self.to(Config.DEVICE)
+
+    def forward(self, observ, deterministic=False):
+        observ = tensor(observ)
+        phi = self.actor_body(observ)
+        mean_ = self.fc_action(phi)
+        mean = torch.tanh(mean_)
+        if deterministic:
+            return mean
+        log_std = self.fc_log_std(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
+        dist = torch.distributions.Normal(mean_, torch.exp(log_std))
+        action_ = dist.rsample()
+        action = torch.tanh(action_)
+        return action
+
+    def log_prob(self, observ):
+        observ = tensor(observ)
+        phi = self.actor_body(observ)
+        mean = self.fc_action(phi)
+        log_std = self.fc_log_std(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
+        dist = torch.distributions.Normal(mean, torch.exp(log_std))
+        action_ = dist.rsample()
+        log_prob = dist.log_prob(action_).sum(-1).unsqueeze(-1)
+        action = torch.tanh(action_)
+        log_prob -= torch.log(1. - action ** 2 + self.EPS).sum(-1).unsqueeze(-1)
+        return log_prob
 
     def q(self, obs, a):
         obs = tensor(obs)
