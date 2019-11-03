@@ -47,6 +47,7 @@ class SACAgent(BaseAgent):
             action = [self.task.action_space.sample()]
         else:
             action = self.network(self.state)
+            action = torch.tanh(action)  # squashing
             action = to_np(action)
             action += self.random_process.sample()
         action = np.clip(action, self.task.action_space.low, self.task.action_space.high)
@@ -71,16 +72,15 @@ class SACAgent(BaseAgent):
             next_states = tensor(next_states)
             mask = tensor(1 - terminals).unsqueeze(-1)
 
-            a_next = self.target_network(next_states, deterministic=True)
-            noise = torch.randn_like(a_next).mul(config.td3_noise)
-            noise = noise.clamp(-config.td3_noise_clip, config.td3_noise_clip)
+            a_next_ = self.network(next_states)
+            a_next = torch.tanh(a_next_)  # squashing
 
             min_a = float(self.task.action_space.low[0])
             max_a = float(self.task.action_space.high[0])
-            a_next = (a_next + noise).clamp(min_a, max_a)
+            a_next = a_next.clamp(min_a, max_a)
 
             q_1, q_2 = self.target_network.q(next_states, a_next)
-            log_prob = self.network.log_prob(next_states)
+            log_prob = self.network.log_prob(next_states, action_=a_next_)
             target = rewards + config.discount * mask * (torch.min(q_1, q_2) - config.sac_coef * log_prob)
             target = target.detach()
 
@@ -92,8 +92,9 @@ class SACAgent(BaseAgent):
             self.network.critic_opt.step()
 
             if self.total_steps % config.td3_delay:
-                action = self.network(states)
-                log_prob = self.network.log_prob(states)
+                action_ = self.network(states)
+                action = torch.tanh(action_)  # squashing
+                log_prob = self.network.log_prob(states, action_=action_)
                 policy_loss = (config.sac_coef * log_prob - self.network.q(states, action)[0]).mean()
 
                 self.network.zero_grad()

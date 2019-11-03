@@ -282,7 +282,8 @@ class SACNet(nn.Module, BaseNet):
         self.fc_critic_1 = layer_init(nn.Linear(self.critic_body_1.feature_dim, 1), 1e-3)
         self.fc_critic_2 = layer_init(nn.Linear(self.critic_body_2.feature_dim, 1), 1e-3)
 
-        self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters()) + list(self.fc_log_std.parameters())
+        self.actor_params = list(self.actor_body.parameters()) + \
+                            list(self.fc_action.parameters()) + list(self.fc_log_std.parameters())
         self.critic_params = list(self.critic_body_1.parameters()) + list(self.fc_critic_1.parameters()) + \
                              list(self.critic_body_2.parameters()) + list(self.fc_critic_2.parameters())
 
@@ -299,17 +300,17 @@ class SACNet(nn.Module, BaseNet):
             return mean
         log_std = self.fc_log_std(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
         dist = torch.distributions.Normal(mean_, torch.exp(log_std))
-        action_ = dist.rsample()
-        action = torch.tanh(action_)
-        return action
+        action_ = dist.rsample()  # never squashing
+        return action_
 
-    def log_prob(self, observ):
+    def log_prob(self, observ, action_=None):
         observ = tensor(observ)
         phi = self.actor_body(observ)
         mean = self.fc_action(phi)
         log_std = self.fc_log_std(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
         dist = torch.distributions.Normal(mean, torch.exp(log_std))
-        action_ = dist.rsample()
+        if action_ is None:
+            action_ = dist.rsample()
         log_prob = dist.log_prob(action_).sum(-1).unsqueeze(-1)
         action = torch.tanh(action_)
         log_prob -= torch.log(1. - action ** 2 + self.EPS).sum(-1).unsqueeze(-1)

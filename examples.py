@@ -521,8 +521,8 @@ if __name__ == '__main__':
     mkdir('tf_log')
     set_one_thread()
     random_seed()
-    # select_device(-1)
-    select_device(1)
+    select_device(0)
+    # select_device(1)
 
     game = 'CartPole-v0'
     # dqn_feature(game=game)
@@ -539,7 +539,7 @@ if __name__ == '__main__':
     # ppo_continuous(game=game)
     # ddpg_continuous(game=game)
     # td3_continuous(game=game)
-    sac_continuous(game=game, tag='b704940262da79c0fec8811a42f01ede9ed2a796')
+    sac_continuous(game=game)
 
     game = 'BreakoutNoFrameskip-v4'
     # dqn_pixel(game=game)
