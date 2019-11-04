@@ -86,6 +86,7 @@ class SACAgent(BaseAgent):
 
             q_1, q_2 = self.network.q(states, actions)
             critic_loss = F.mse_loss(q_1, target) + F.mse_loss(q_2, target)
+            self.logger.add_scalar('critic_loss', critic_loss)
 
             self.network.zero_grad()
             critic_loss.backward()
@@ -96,9 +97,13 @@ class SACAgent(BaseAgent):
                 action = torch.tanh(action_)  # squashing
                 log_prob = self.network.log_prob(states, action_=action_)
                 policy_loss = (config.sac_coef * log_prob - self.network.q(states, action)[0]).mean()
+                self.logger.add_scalar('policy_loss', policy_loss)
 
                 self.network.zero_grad()
                 policy_loss.backward()
                 self.network.actor_opt.step()
 
                 self.soft_update(self.target_network, self.network)
+
+            entropy = self.network.entropy()
+            self.logger.add_scalar('entropy', entropy)
