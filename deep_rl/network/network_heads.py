@@ -334,3 +334,103 @@ class SACNet(nn.Module, BaseNet):
         if self.dist:
             return self.dist.entropy().mean()
         return None
+
+
+class STACNet(nn.Module, BaseNet):
+    EPS = 1e-6
+    LOG_STD_MAX = 2
+    LOG_STD_MIN = -20
+
+    def __init__(self,
+                 action_dim,
+                 actor_body_fn,
+                 critic_body_fn,
+                 actor_opt_fn,
+                 critic_opt_fn,
+                 ):
+        super(STACNet, self).__init__()
+        self.actor_body_1 = actor_body_fn()
+        self.actor_body_2 = actor_body_fn()
+        self.critic_body_1 = critic_body_fn()
+        self.critic_body_2 = critic_body_fn()
+
+        self.fc_mean_1 = layer_init(nn.Linear(self.actor_body_1.feature_dim, action_dim), 1e-3)
+        self.fc_log_std_1 = layer_init(nn.Linear(self.actor_body_1.feature_dim, action_dim), 1e-3)
+        self.fc_mean_2 = layer_init(nn.Linear(self.actor_body_2.feature_dim, action_dim), 1e-3)
+        self.fc_log_std_2 = layer_init(nn.Linear(self.actor_body_2.feature_dim, action_dim), 1e-3)
+        self.fc_critic_1 = layer_init(nn.Linear(self.critic_body_1.feature_dim, 1), 1e-3)
+        self.fc_critic_2 = layer_init(nn.Linear(self.critic_body_2.feature_dim, 1), 1e-3)
+
+        self.actor_params = list(self.actor_body_1.parameters()) + list(self.actor_body_2.parameters()) + \
+                            list(self.fc_mean_1.parameters()) + list(self.fc_log_std_1.parameters()) + \
+                            list(self.fc_mean_2.parameters()) + list(self.fc_log_std_2.parameters())
+        self.critic_params = list(self.critic_body_1.parameters()) + list(self.fc_critic_1.parameters()) + \
+                             list(self.critic_body_2.parameters()) + list(self.fc_critic_2.parameters())
+
+        self.actor_opt = actor_opt_fn(self.actor_params)
+        self.critic_opt = critic_opt_fn(self.critic_params)
+
+        self.dist = None
+        self.to(Config.DEVICE)
+
+    def forward(self, observ, deterministic=False):
+        mean, _, dist = self._distribution(observ, deterministic)
+        if deterministic:
+            return mean
+        action_ = dist.rsample()  # never squashing
+        return action_
+
+    def log_prob(self, observ, action_):
+        observ = tensor(observ)
+        _, _, dist_1 = self._distribution_1(observ, deterministic=False)
+        _, _, dist_2 = self._distribution_2(observ)
+        log_prob_1 = dist_1.log_prob(action_).sum(-1).unsqueeze(-1)
+        log_prob_2 = dist_2.log_prob(action_).sum(-1).unsqueeze(-1)
+        action_ = torch.tanh(action_)
+        # Squash correction(from original implementation)
+        log_prob_1 -= torch.log(1. - action_ ** 2 + self.EPS).sum(-1).unsqueeze(-1)
+        log_prob_2 -= torch.log(1. - action_ ** 2 + self.EPS).sum(-1).unsqueeze(-1)
+        return log_prob_1, log_prob_2
+
+
+    def q(self, obs, a):
+        obs = tensor(obs)
+        a = tensor(a)
+        x = torch.cat([obs, a], dim=1)
+        q_1 = self.fc_critic_1(self.critic_body_1(x))
+        q_2 = self.fc_critic_2(self.critic_body_2(x))
+        return q_1, q_2
+
+    def _distribution_1(self, observ, deterministic):
+        phi = self.actor_body_1(observ)
+        mean = self.fc_mean_1(phi)
+        if deterministic:
+            mean = torch.tanh(mean)
+            return mean, None, None
+        log_std = self.fc_log_std_1(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
+        dist = torch.distributions.Normal(mean, torch.exp(log_std))
+        return mean, log_std, dist
+
+    def _distribution_2(self, observ):
+        phi = self.actor_body_2(observ)
+        mean = self.fc_mean_2(phi)
+        log_std = self.fc_log_std_2(phi).clamp(self.LOG_STD_MIN, self.LOG_STD_MAX)
+        dist = torch.distributions.Normal(mean, torch.exp(log_std))
+        return mean, log_std, dist
+
+    def _distribution(self, observ, deterministic=False):
+        observ = tensor(observ)
+        mean_1, log_std_1, dist_1 = self._distribution_1(observ, deterministic)
+        if deterministic:
+            mean = torch.tanh(mean_1)
+            return mean, None, None
+        mean_2, log_std_2, dist_2 = self._distribution_2(observ)
+        mean, log_std, dist = [mean_1, log_std_1, dist_1] \
+            if dist_1.entropy().mean() > dist_2.entropy().mean() else [mean_2, log_std_2, dist_2]
+        self.dist = dist
+        return mean, log_std, dist
+
+    def entropy(self):
+        if self.dist:
+            return self.dist.entropy().mean()
+        return None
