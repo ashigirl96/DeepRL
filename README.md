@@ -10,27 +10,26 @@ Implemented algorithms:
 * Quantile Regression DQN
 * (Continuous/Discrete) Synchronous Advantage Actor Critic (A2C)
 * Synchronous N-Step Q-Learning
-* Deep Deterministic Policy Gradient (DDPG, low-dim-state)
-* (Continuous/Discrete) Synchronous Proximal Policy Optimization (PPO, pixel & low-dim-state)
+* Deep Deterministic Policy Gradient (DDPG)
+* Proximal Policy Optimization (PPO)
 * The Option-Critic Architecture (OC)
 * Twined Delayed DDPG (TD3)
-* [DAC/Geoff-PAC/QUOTA/ACE](#code-of-my-papers)
+* [Bi-Res-DDPG/DAC/Geoff-PAC/QUOTA/ACE](#code-of-my-papers)
 
 Asynchronous algorithms (e.g., A3C) can be found in [v0.1](https://github.com/ShangtongZhang/DeepRL/releases/tag/v0.1).
 Action Conditional Video Prediction can be found in [v0.4](https://github.com/ShangtongZhang/DeepRL/releases/tag/v0.4).
-
+Synchronous PPO for Atari games can be found in [v1.1](https://github.com/ShangtongZhang/DeepRL/releases/tag/v1.1)
 
 # Dependency
 * MacOS 10.12 or Ubuntu 16.04
-* PyTorch v1.1.0
+* PyTorch v1.4.0
 * Python 3.6, 3.5
 * OpenAI Baselines (commit ```8e56dd```)
 * Core dependencies: `pip install -e .`
 
 # Remarks
-* PyTorch v0.4.0 should also work in principle, at least for commit ```80939f```.
 * There is a super fast DQN implementation with an async actor for data generation and an async replay buffer to transfer data to GPU. Enable this implementation by setting `config.async_actor = True` and using `AsyncReplay`. However, with atari games this fast implementation may not work in macOS. Use Ubuntu or Docker instead.
-* Although there is a `setup.py`, which means you can install the repo as a library, this repo is **never** designed to be a high-level library like Keras. Use it as your codebase instead.
+* Although there is a `setup.py`, this repo is **never** designed to be a high-level library like Keras. Use it as your codebase instead.
 * TensorFlow is used only for logging. Open AI baselines is used very slightly. If you carefully read the code, you should be able to remove/replace them.
 
 # Usage
@@ -51,23 +50,21 @@ Please use this bibtex if you want to cite this repo
 }
 ```
 
-# Curves (commit ```80939f```)
+# Curves (commit ```36aad5```)
 
-## BreakoutNoFrameskip-v4
+## BreakoutNoFrameskip-v4 (1 run)
 
 ![Loading...](https://raw.githubusercontent.com/ShangtongZhang/DeepRL/master/images/Breakout.png)
-
-* This is my synchronous option-critic implementation, not the original one.
-* The curves are not directly comparable, as many hyper-parameters are different.
 
 ## Mujoco 
 
 * DDPG/TD3 evaluation performance.
 ![Loading...](https://raw.githubusercontent.com/ShangtongZhang/DeepRL/master/images/mujoco_eval.png)
-
+(5 runs, mean + standard error)
 
 * PPO online performance. 
 ![Loading...](https://raw.githubusercontent.com/ShangtongZhang/DeepRL/master/images/PPO.png)
+(5 runs, mean + standard error, smoothed by a window of size 10)
 
 
 # References
@@ -93,6 +90,7 @@ Please use this bibtex if you want to cite this repo
 
 # Code of My Papers
 > They are located in other branches of this repo and seem to be good examples for using this codebase.
+* [Deep Residual Reinforcement Learning](https://arxiv.org/abs/1905.01072) [[Bi-Res-DDPG](https://github.com/ShangtongZhang/DeepRL/tree/Bi-Res-DDPG)]
 * [Generalized Off-Policy Actor-Critic](https://arxiv.org/abs/1903.11329) [[Geoff-PAC](https://github.com/ShangtongZhang/DeepRL/tree/Geoff-PAC), [TD3-random](https://github.com/ShangtongZhang/DeepRL/tree/TD3-random)]
 * [DAC: The Double Actor-Critic Architecture for Learning Options](https://arxiv.org/abs/1904.12691) [[DAC](https://github.com/ShangtongZhang/DeepRL/tree/DAC)]
 * [QUOTA: The Quantile Option Architecture for Reinforcement Learning](https://arxiv.org/abs/1811.02073) [[QUOTA-discrete](https://github.com/ShangtongZhang/DeepRL/tree/QUOTA-discrete), [QUOTA-continuous](https://github.com/ShangtongZhang/DeepRL/tree/QUOTA-continuous)]

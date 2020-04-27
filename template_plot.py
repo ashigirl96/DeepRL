@@ -13,6 +13,9 @@ def plot_ppo():
         'Hopper-v2',
         'Swimmer-v2',
         'Reacher-v2',
+        'Ant-v2',
+        'Humanoid-v2',
+        'HumanoidStandup-v2',
     ]
 
     patterns = [
@@ -32,7 +35,7 @@ def plot_ppo():
                        tag=plotter.RETURN_TRAIN,
                        root='./data/benchmark/ppo',
                        interpolation=100,
-                       window=0,
+                       window=10,
                        )
 
     # plt.show()
@@ -48,6 +51,9 @@ def plot_ddpg_td3():
         'Hopper-v2',
         'Swimmer-v2',
         'Reacher-v2',
+        'Ant-v2',
+        # 'Humanoid-v2',
+        # 'HumanoidStandup-v2',
     ]
 
     patterns = [
@@ -89,7 +95,6 @@ def plot_atari():
         'remark_dqn',
         'remark_n_step_dqn',
         'remark_option_critic',
-        'remark_ppo',
         'remark_quantile',
     ]
 
@@ -99,7 +104,6 @@ def plot_atari():
         'DQN',
         'N-Step DQN',
         'OC',
-        'PPO',
         'QR-DQN',
     ]
 
@@ -122,6 +126,6 @@ def plot_atari():
 
 if __name__ == '__main__':
     mkdir('images')
-    # plot_ppo()
+    plot_ppo()
     plot_ddpg_td3()
     # plot_atari()

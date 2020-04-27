@@ -158,6 +158,12 @@ class GaussianActorCriticNet(nn.Module, BaseNet):
         self.critic_params = list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
         self.phi_params = list(self.phi_body.parameters())
         self.std = nn.Parameter(torch.zeros(action_dim))
+        self.phi_params = list(self.phi_body.parameters())
+
+        self.actor_params = list(self.actor_body.parameters()) + list(self.fc_action.parameters()) + self.phi_params
+        self.actor_params.append(self.std)
+        self.critic_params = list(self.critic_body.parameters()) + list(self.fc_critic.parameters()) + self.phi_params
+
         self.to(Config.DEVICE)
 
     def forward(self, obs, action=None):
