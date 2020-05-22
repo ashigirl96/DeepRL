@@ -34,6 +34,7 @@ class Config:
         self.entropy_weight = 0
         self.use_gae = False
         self.gae_tau = 1.0
+        self.mpo_eta = 0.001
         self.target_network_mix = 0.001
         self.state_normalizer = RescaleNormalizer()
         self.reward_normalizer = RescaleNormalizer()

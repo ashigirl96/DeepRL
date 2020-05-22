@@ -370,6 +370,35 @@ def ppo_continuous(**kwargs):
     run_steps(PPOAgent(config))
 
 
+# MPO
+def mpo_continuous(**kwargs):
+    generate_tag(kwargs)
+    kwargs.setdefault('log_level', 0)
+    config = Config()
+    config.merge(kwargs)
+
+    config.task_fn = lambda: Task(config.game)
+    config.eval_env = config.task_fn()
+
+    config.network_fn = lambda: GaussianActorCriticNet(
+        config.state_dim, config.action_dim, actor_body=FCBody(config.state_dim, gate=torch.tanh),
+        critic_body=FCBody(config.state_dim, gate=torch.tanh))
+    config.actor_opt_fn = lambda params: torch.optim.Adam(params, 3e-4)
+    config.critic_opt_fn = lambda params: torch.optim.Adam(params, 1e-3)
+    config.discount = 0.99
+    config.use_gae = True
+    config.gae_tau = 0.95
+    config.gradient_clip = 0.5
+    config.rollout_length = 2048
+    config.optimization_epochs = 10
+    config.mini_batch_size = 64
+    config.ppo_ratio_clip = 0.2
+    config.log_interval = 2048
+    config.max_steps = 3e6
+    config.target_kl = 0.01
+    config.state_normalizer = MeanStdNormalizer()
+    run_steps(MPOAgent(config))
+
 # DDPG
 def ddpg_continuous(**kwargs):
     generate_tag(kwargs)
@@ -483,13 +512,15 @@ if __name__ == '__main__':
     # n_step_dqn_feature(game=game)
     # option_critic_feature(game=game)
 
-    game = 'HalfCheetah-v2'
+    game = 'RoboschoolReacher-v1'
+    # game = 'HalfCheetah-v2'
     # game = 'Hopper-v2'
     # a2c_continuous(game=game)
     # ppo_continuous(game=game)
+    mpo_continuous(game=game)
     # ddpg_continuous(game=game)
     # td3_continuous(game=game)
-    sac_continuous(game=game)
+    # sac_continuous(game=game)
 
     game = 'BreakoutNoFrameskip-v4'
     # dqn_pixel(game=game)
