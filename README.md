@@ -1,47 +1,37 @@
 # DeepRL
 
-> If you have any question or want to report a bug, please open an issue instead of emailing me directly.
+> If you have any question or want to report a bug, please open an issue instead of emailing me directly.  
 
-Modularized implementation of popular deep RL algorithms by PyTorch. Easy switch between toy tasks and challenging games.
+Modularized implementation of popular deep RL algorithms in PyTorch.  
+Easy switch between toy tasks and challenging games.
 
 Implemented algorithms:
-* (Double/Dueling) Deep Q-Learning (DQN)
-* Categorical DQN (C51, Distributional DQN with KL Distance)
-* Quantile Regression DQN
+* (Double/Dueling/Prioritized) Deep Q-Learning (DQN)
+* Categorical DQN (C51)
+* Quantile Regression DQN (QR-DQN)
 * (Continuous/Discrete) Synchronous Advantage Actor Critic (A2C)
-* Synchronous N-Step Q-Learning
+* Synchronous N-Step Q-Learning (N-Step DQN)
 * Deep Deterministic Policy Gradient (DDPG)
 * Proximal Policy Optimization (PPO)
 * The Option-Critic Architecture (OC)
 * Twined Delayed DDPG (TD3)
-* [Bi-Res-DDPG/DAC/Geoff-PAC/QUOTA/ACE](#code-of-my-papers)
+* [COF-PAC/GradientDICE/Bi-Res-DDPG/DAC/Geoff-PAC/QUOTA/ACE](#code-of-my-papers)
 
-Asynchronous algorithms (e.g., A3C) can be found in [v0.1](https://github.com/ShangtongZhang/DeepRL/releases/tag/v0.1).
-Action Conditional Video Prediction can be found in [v0.4](https://github.com/ShangtongZhang/DeepRL/releases/tag/v0.4).
-Synchronous PPO for Atari games can be found in [v1.1](https://github.com/ShangtongZhang/DeepRL/releases/tag/v1.1)
+The DQN agent, as well as C51 and QR-DQN, has an asynchronous actor for data generation and an asynchronous replay buffer for transferring data to GPU.
+Using 1 RTX 2080 Ti and 3 threads, the DQN agent runs for 10M steps (40M frames, 2.5M gradient updates) for Breakout within 6 hours.
 
 # Dependency
-* MacOS 10.12 or Ubuntu 16.04
-* PyTorch v1.4.0
-* Python 3.6, 3.5
-* OpenAI Baselines (commit ```8e56dd```)
-* Core dependencies: `pip install -e .`
-
-# Remarks
-* There is a super fast DQN implementation with an async actor for data generation and an async replay buffer to transfer data to GPU. Enable this implementation by setting `config.async_actor = True` and using `AsyncReplay`. However, with atari games this fast implementation may not work in macOS. Use Ubuntu or Docker instead.
-* Although there is a `setup.py`, this repo is **never** designed to be a high-level library like Keras. Use it as your codebase instead.
-* TensorFlow is used only for logging. Open AI baselines is used very slightly. If you carefully read the code, you should be able to remove/replace them.
+* PyTorch v1.5.1
+* See ```Dockerfile``` and ```requirements.txt``` for more details
 
 # Usage
 
-```examples.py``` contains examples for all the implemented algorithms
-
-```Dockerfile``` contains the environment for generating the curves below. 
-
+```examples.py``` contains examples for all the implemented algorithms.  
+```Dockerfile``` contains the environment for generating the curves below.  
 Please use this bibtex if you want to cite this repo
 ```
 @misc{deeprl,
-  author = {Shangtong, Zhang},
+  author = {Zhang, Shangtong},
   title = {Modularized Implementation of Deep RL Algorithms in PyTorch},
   year = {2018},
   publisher = {GitHub},
@@ -50,7 +40,7 @@ Please use this bibtex if you want to cite this repo
 }
 ```
 
-# Curves (commit ```36aad5```)
+# Curves (commit ```9e811e```)
 
 ## BreakoutNoFrameskip-v4 (1 run)
 
@@ -90,6 +80,8 @@ Please use this bibtex if you want to cite this repo
 
 # Code of My Papers
 > They are located in other branches of this repo and seem to be good examples for using this codebase.
+* [Provably Convergent Two-Timescale Off-Policy Actor-Critic with Function Approximation](https://arxiv.org/abs/1911.04384) [[COF-PAC](https://github.com/ShangtongZhang/DeepRL/tree/COF-PAC), [TD3-random](https://github.com/ShangtongZhang/DeepRL/tree/TD3-random)]
+* [GradientDICE: Rethinking Generalized Offline Estimation of Stationary Values](https://arxiv.org/abs/2001.11113) [[GradientDICE](https://github.com/ShangtongZhang/DeepRL/tree/GradientDICE)]
 * [Deep Residual Reinforcement Learning](https://arxiv.org/abs/1905.01072) [[Bi-Res-DDPG](https://github.com/ShangtongZhang/DeepRL/tree/Bi-Res-DDPG)]
 * [Generalized Off-Policy Actor-Critic](https://arxiv.org/abs/1903.11329) [[Geoff-PAC](https://github.com/ShangtongZhang/DeepRL/tree/Geoff-PAC), [TD3-random](https://github.com/ShangtongZhang/DeepRL/tree/TD3-random)]
 * [DAC: The Double Actor-Critic Architecture for Learning Options](https://arxiv.org/abs/1904.12691) [[DAC](https://github.com/ShangtongZhang/DeepRL/tree/DAC)]

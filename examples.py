@@ -11,6 +11,9 @@ from deep_rl import *
 def dqn_feature(**kwargs):
     generate_tag(kwargs)
     kwargs.setdefault('log_level', 0)
+    kwargs.setdefault('n_step', 1)
+    kwargs.setdefault('replay_cls', UniformReplay)
+    kwargs.setdefault('async_replay', True)
     config = Config()
     config.merge(kwargs)
 
@@ -20,11 +23,24 @@ def dqn_feature(**kwargs):
     config.optimizer_fn = lambda params: torch.optim.RMSprop(params, 0.001)
     config.network_fn = lambda: VanillaNet(config.action_dim, FCBody(config.state_dim))
     # config.network_fn = lambda: DuelingNet(config.action_dim, FCBody(config.state_dim))
-    # config.replay_fn = lambda: Replay(memory_size=int(1e4), batch_size=10)
-    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e4), batch_size=10)
+    config.history_length = 1
+    config.batch_size = 10
+    config.discount = 0.99
+    config.max_steps = 1e5
+
+    replay_kwargs = dict(
+        memory_size=int(1e4),
+        batch_size=config.batch_size,
+        n_step=config.n_step,
+        discount=config.discount,
+        history_length=config.history_length)
+
+    config.replay_fn = lambda: ReplayWrapper(config.replay_cls, replay_kwargs, config.async_replay)
+    config.replay_eps = 0.01
+    config.replay_alpha = 0.5
+    config.replay_beta = LinearSchedule(0.4, 1.0, config.max_steps)
 
     config.random_action_prob = LinearSchedule(1.0, 0.1, 1e4)
-    config.discount = 0.99
     config.target_network_update_freq = 200
     config.exploration_steps = 1000
     # config.double_q = True
@@ -32,7 +48,6 @@ def dqn_feature(**kwargs):
     config.sgd_update_frequency = 4
     config.gradient_clip = 5
     config.eval_interval = int(5e3)
-    config.max_steps = 1e5
     config.async_actor = False
     run_steps(DQNAgent(config))
 
@@ -40,6 +55,9 @@ def dqn_feature(**kwargs):
 def dqn_pixel(**kwargs):
     generate_tag(kwargs)
     kwargs.setdefault('log_level', 0)
+    kwargs.setdefault('n_step', 1)
+    kwargs.setdefault('replay_cls', UniformReplay)
+    kwargs.setdefault('async_replay', True)
     config = Config()
     config.merge(kwargs)
 
@@ -51,22 +69,31 @@ def dqn_pixel(**kwargs):
     config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
     # config.network_fn = lambda: DuelingNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
     config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
-
-    # config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=32)
-    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e6), batch_size=32)
-
     config.batch_size = 32
+    config.discount = 0.99
+    config.history_length = 4
+    config.max_steps = int(2e7)
+    replay_kwargs = dict(
+        memory_size=int(1e6),
+        batch_size=config.batch_size,
+        n_step=config.n_step,
+        discount=config.discount,
+        history_length=config.history_length,
+    )
+    config.replay_fn = lambda: ReplayWrapper(config.replay_cls, replay_kwargs, config.async_replay)
+    config.replay_eps = 0.01
+    config.replay_alpha = 0.5
+    config.replay_beta = LinearSchedule(0.4, 1.0, config.max_steps)
+
     config.state_normalizer = ImageNormalizer()
     config.reward_normalizer = SignNormalizer()
-    config.discount = 0.99
     config.target_network_update_freq = 10000
     config.exploration_steps = 50000
+    # config.exploration_steps = 100
     config.sgd_update_frequency = 4
     config.gradient_clip = 5
-    config.history_length = 4
-    # config.double_q = True
     config.double_q = False
-    config.max_steps = int(2e7)
+    config.async_actor = True
     run_steps(DQNAgent(config))
 
 
@@ -82,8 +109,11 @@ def quantile_regression_dqn_feature(**kwargs):
     config.optimizer_fn = lambda params: torch.optim.RMSprop(params, 0.001)
     config.network_fn = lambda: QuantileNet(config.action_dim, config.num_quantiles, FCBody(config.state_dim))
 
-    # config.replay_fn = lambda: Replay(memory_size=int(1e4), batch_size=10)
-    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e4), batch_size=10)
+    config.batch_size = 10
+    replay_kwargs = dict(
+        memory_size=int(1e4),
+        batch_size=config.batch_size)
+    config.replay_fn = lambda: ReplayWrapper(UniformReplay, replay_kwargs, async=True)
 
     config.random_action_prob = LinearSchedule(1.0, 0.1, 1e4)
     config.discount = 0.99
@@ -110,8 +140,13 @@ def quantile_regression_dqn_pixel(**kwargs):
     config.network_fn = lambda: QuantileNet(config.action_dim, config.num_quantiles, NatureConvBody())
     config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
 
-    # config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=32)
-    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e6), batch_size=32)
+    config.batch_size = 32
+    replay_kwargs = dict(
+        memory_size=int(1e6),
+        batch_size=config.batch_size,
+        history_length=4,
+    )
+    config.replay_fn = lambda: ReplayWrapper(UniformReplay, replay_kwargs, async=True)
 
     config.state_normalizer = ImageNormalizer()
     config.reward_normalizer = SignNormalizer()
@@ -138,8 +173,11 @@ def categorical_dqn_feature(**kwargs):
     config.network_fn = lambda: CategoricalNet(config.action_dim, config.categorical_n_atoms, FCBody(config.state_dim))
     config.random_action_prob = LinearSchedule(1.0, 0.1, 1e4)
 
-    # config.replay_fn = lambda: Replay(memory_size=10000, batch_size=10)
-    config.replay_fn = lambda: AsyncReplay(memory_size=10000, batch_size=10)
+    config.batch_size = 10
+    replay_kwargs = dict(
+        memory_size=int(1e4),
+        batch_size=config.batch_size)
+    config.replay_fn = lambda: ReplayWrapper(UniformReplay, replay_kwargs, async=True)
 
     config.discount = 0.99
     config.target_network_update_freq = 200
@@ -167,8 +205,13 @@ def categorical_dqn_pixel(**kwargs):
     config.network_fn = lambda: CategoricalNet(config.action_dim, config.categorical_n_atoms, NatureConvBody())
     config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
 
-    # config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=32)
-    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e6), batch_size=32)
+    config.batch_size = 32
+    replay_kwargs = dict(
+        memory_size=int(1e6),
+        batch_size=config.batch_size,
+        history_length=4,
+    )
+    config.replay_fn = lambda: ReplayWrapper(UniformReplay, replay_kwargs, async=True)
 
     config.discount = 0.99
     config.state_normalizer = ImageNormalizer()
@@ -181,6 +224,115 @@ def categorical_dqn_pixel(**kwargs):
     config.sgd_update_frequency = 4
     config.gradient_clip = 0.5
     config.max_steps = int(2e7)
+    run_steps(CategoricalDQNAgent(config))
+
+
+# Rainbow
+def rainbow_feature(**kwargs):
+    generate_tag(kwargs)
+    kwargs.setdefault('log_level', 0)
+    kwargs.setdefault('n_step', 3)
+    kwargs.setdefault('replay_cls', PrioritizedReplay)
+    kwargs.setdefault('async_replay', True)
+    config = Config()
+    config.merge(kwargs)
+
+    config.task_fn = lambda: Task(config.game)
+    config.eval_env = config.task_fn()
+
+    config.max_steps = 1e5
+    config.optimizer_fn = lambda params: torch.optim.RMSprop(params, 0.001)
+    config.noisy_linear = True
+    config.network_fn = lambda: RainbowNet(
+        config.action_dim,
+        config.categorical_n_atoms,
+        FCBody(config.state_dim, noisy_linear=config.noisy_linear),
+        noisy_linear=config.noisy_linear
+    )
+    config.categorical_v_max = 100
+    config.categorical_v_min = -100
+    config.categorical_n_atoms = 50
+
+    config.discount = 0.99
+    config.batch_size = 32
+    replay_kwargs = dict(
+        memory_size=int(1e4),
+        batch_size=config.batch_size,
+        n_step=config.n_step,
+        discount=config.discount,
+        history_length=1)
+
+    config.replay_fn = lambda: ReplayWrapper(config.replay_cls, replay_kwargs, config.async_replay)
+
+    config.replay_eps = 0.01
+    config.replay_alpha = 0.5
+    config.replay_beta = LinearSchedule(0.4, 1, config.max_steps)
+    config.random_action_prob = LinearSchedule(1.0, 0.1, 1e4)
+
+    config.target_network_update_freq = 200
+    config.exploration_steps = 1000
+    config.double_q = True
+    config.sgd_update_frequency = 4
+    config.eval_interval = int(5e3)
+    config.async_actor = True
+    config.gradient_clip = 10
+
+    run_steps(CategoricalDQNAgent(config))
+
+
+def rainbow_pixel(**kwargs):
+    generate_tag(kwargs)
+    kwargs.setdefault('log_level', 0)
+    kwargs.setdefault('n_step', 1)
+    kwargs.setdefault('replay_cls', PrioritizedReplay)
+    kwargs.setdefault('async_replay', True)
+    kwargs.setdefault('noisy_linear', True)
+    config = Config()
+    config.merge(kwargs)
+
+    config.task_fn = lambda: Task(config.game)
+    config.eval_env = config.task_fn()
+
+    config.max_steps = int(2e7)
+    Config.NOISY_LAYER_STD = 0.5
+    config.optimizer_fn = lambda params: torch.optim.Adam(
+        params, lr=0.000625, eps=1.5e-4)
+    config.network_fn = lambda: RainbowNet(
+        config.action_dim,
+        config.categorical_n_atoms,
+        NatureConvBody(noisy_linear=config.noisy_linear),
+        noisy_linear=config.noisy_linear,
+    )
+    config.categorical_v_max = 10
+    config.categorical_v_min = -10
+    config.categorical_n_atoms = 51
+
+    config.random_action_prob = LinearSchedule(1, 0.01, 25e4)
+
+    config.batch_size = 32
+    config.discount = 0.99
+    config.history_length = 4
+    replay_kwargs = dict(
+        memory_size=int(1e6),
+        batch_size=config.batch_size,
+        n_step=config.n_step,
+        discount=config.discount,
+        history_length=config.history_length,
+    )
+    config.replay_fn = lambda: ReplayWrapper(config.replay_cls, replay_kwargs, config.async_replay)
+    config.replay_eps = 0.01
+    config.replay_alpha = 0.5
+    config.replay_beta = LinearSchedule(0.4, 1.0, config.max_steps)
+
+    config.state_normalizer = ImageNormalizer()
+    config.reward_normalizer = SignNormalizer()
+    config.target_network_update_freq = 2000
+    config.exploration_steps = 20000
+    # config.exploration_steps = 200
+    config.sgd_update_frequency = 4
+    config.double_q = True
+    config.async_actor = True
+    config.gradient_clip = 10
     run_steps(CategoricalDQNAgent(config))
 
 
@@ -370,6 +522,34 @@ def ppo_continuous(**kwargs):
     run_steps(PPOAgent(config))
 
 
+def ppo_pixel(**kwargs):
+    generate_tag(kwargs)
+    kwargs.setdefault('skip', False)
+    config = Config()
+    config.merge(kwargs)
+
+    config.task_fn = lambda: Task(config.game, num_envs=config.num_workers)
+    config.eval_env = Task(config.game)
+    config.num_workers = 8
+    config.optimizer_fn = lambda params: torch.optim.Adam(params, lr=2.5e-4)
+    config.network_fn = lambda: CategoricalActorCriticNet(config.state_dim, config.action_dim, NatureConvBody())
+    config.state_normalizer = ImageNormalizer()
+    config.reward_normalizer = SignNormalizer()
+    config.discount = 0.99
+    config.use_gae = True
+    config.gae_tau = 0.95
+    config.entropy_weight = 0.01
+    config.gradient_clip = 0.5
+    config.rollout_length = 128
+    config.optimization_epochs = 4
+    config.mini_batch_size = config.rollout_length * config.num_workers // 4
+    config.ppo_ratio_clip = 0.1
+    config.log_interval = config.rollout_length * config.num_workers
+    config.shared_repr = True
+    config.max_steps = int(2e7)
+    run_steps(PPOAgent(config))
+
+
 # DDPG
 def ddpg_continuous(**kwargs):
     generate_tag(kwargs)
@@ -386,17 +566,16 @@ def ddpg_continuous(**kwargs):
     config.network_fn = lambda: DeterministicActorCriticNet(
         config.state_dim, config.action_dim,
         actor_body=FCBody(config.state_dim, (400, 300), gate=F.relu),
-        critic_body=TwoLayerFCBodyWithAction(
-            config.state_dim, config.action_dim, (400, 300), gate=F.relu),
-        actor_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-4),
+        critic_body=FCBody(config.state_dim + config.action_dim, (400, 300), gate=F.relu),
+        actor_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-3),
         critic_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-3))
 
-    config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=64)
+    config.replay_fn = lambda: UniformReplay(memory_size=int(1e6), batch_size=100)
     config.discount = 0.99
     config.random_process_fn = lambda: OrnsteinUhlenbeckProcess(
         size=(config.action_dim,), std=LinearSchedule(0.2))
     config.warm_up = int(1e4)
-    config.target_network_mix = 1e-3
+    config.target_network_mix = 5e-3
     run_steps(DDPGAgent(config))
 
 
@@ -421,7 +600,12 @@ def td3_continuous(**kwargs):
         actor_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-3),
         critic_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-3))
 
-    config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=100)
+    replay_kwargs = dict(
+        memory_size=int(1e6),
+        batch_size=100,
+    )
+
+    config.replay_fn = lambda: ReplayWrapper(UniformReplay, replay_kwargs)
     config.discount = 0.99
     config.random_process_fn = lambda: GaussianProcess(
         size=(config.action_dim,), std=LinearSchedule(0.1))
@@ -472,13 +656,15 @@ if __name__ == '__main__':
     mkdir('tf_log')
     set_one_thread()
     random_seed()
+    # -1 is CPU, a positive integer is the index of GPU
     select_device(-1)
     # select_device(0)
 
     game = 'CartPole-v0'
-    # dqn_feature(game=game)
+    # dqn_feature(game=game, n_step=1, replay_cls=UniformReplay, async_replay=True, noisy_linear=True)
     # quantile_regression_dqn_feature(game=game)
     # categorical_dqn_feature(game=game)
+    # rainbow_feature(game=game)
     # a2c_feature(game=game)
     # n_step_dqn_feature(game=game)
     # option_critic_feature(game=game)
@@ -492,9 +678,11 @@ if __name__ == '__main__':
     sac_continuous(game=game)
 
     game = 'BreakoutNoFrameskip-v4'
-    # dqn_pixel(game=game)
+    dqn_pixel(game=game, n_step=1, replay_cls=UniformReplay, async_replay=False)
     # quantile_regression_dqn_pixel(game=game)
     # categorical_dqn_pixel(game=game)
+    # rainbow_pixel(game=game, async_replay=False)
     # a2c_pixel(game=game)
     # n_step_dqn_pixel(game=game)
     # option_critic_pixel(game=game)
+    # ppo_pixel(game=game)

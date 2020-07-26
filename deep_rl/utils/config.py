@@ -10,6 +10,9 @@ import torch
 
 class Config:
     DEVICE = torch.device('cpu')
+    NOISY_LAYER_STD = 0.1
+    DEFAULT_REPLAY = 'replay'
+    PRIORITIZED_REPLAY = 'prioritized_replay'
 
     def __init__(self):
         self.parser = argparse.ArgumentParser()
@@ -58,6 +61,11 @@ class Config:
         self.eval_episodes = 10
         self.async_actor = True
         self.tasks = False
+        self.replay_type = Config.DEFAULT_REPLAY
+        self.decaying_lr = False
+        self.shared_repr = False
+        self.noisy_linear = False
+        self.n_step = 1
 
     @property
     def eval_env(self):

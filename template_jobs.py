@@ -11,7 +11,6 @@ def batch_atari():
         'BreakoutNoFrameskip-v4',
         # 'AlienNoFrameskip-v4',
         # 'DemonAttackNoFrameskip-v4',
-        # 'SeaquestNoFrameskip-v4',
         # 'MsPacmanNoFrameskip-v4'
     ]
 
@@ -19,17 +18,34 @@ def batch_atari():
         dqn_pixel,
         quantile_regression_dqn_pixel,
         categorical_dqn_pixel,
+        rainbow_pixel,
         a2c_pixel,
         n_step_dqn_pixel,
         option_critic_pixel,
+        ppo_pixel,
     ]
 
-    algo = algos[cf.i]
+    params = []
 
     for game in games:
         for r in range(1):
-            algo(game=game, run=r, remark=algo.__name__)
+            for algo in algos:
+                params.append([algo, dict(game=game, run=r, remark=algo.__name__)])
+            # for n_step in [1, 2, 3]:
+            #     for double_q in [True, False]:
+            #         params.extend([
+            #             [dqn_pixel,
+            #              dict(game=game, run=r, n_step=n_step, replay_cls=PrioritizedReplay, double_q=double_q,
+            #                   remark=dqn_pixel.__name__)],
+                        # [rainbow_pixel,
+                        #  dict(game=game, run=r, n_step=n_step, noisy_linear=False, remark=rainbow_pixel.__name__)]
+                    # ])
+            # params.append(
+            #     [categorical_dqn_pixel, dict(game=game, run=r, remark=categorical_dqn_pixel.__name__)]),
+            # params.append([dqn_pixel, dict(game=game, run=r, remark=dqn_pixel.__name__)])
 
+    algo, param = params[cf.i]
+    algo(**param)
     exit()
 
 
@@ -84,7 +100,11 @@ def batch_mujoco():
     params = []
 
     for game in games:
-        for algo in [ppo_continuous, ddpg_continuous, td3_continuous]:
+        if 'Humanoid' in game:
+            algos = [ppo_continuous]
+        else:
+            algos = [ppo_continuous, ddpg_continuous, td3_continuous]
+        for algo in algos:
             for r in range(5):
                 params.append([algo, dict(game=game, run=r)])
 

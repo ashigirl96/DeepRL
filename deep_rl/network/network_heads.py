@@ -17,8 +17,8 @@ class VanillaNet(nn.Module, BaseNet):
 
     def forward(self, x):
         phi = self.body(tensor(x))
-        y = self.fc_head(phi)
-        return y
+        q = self.fc_head(phi)
+        return dict(q=q)
 
 
 class DuelingNet(nn.Module, BaseNet):
@@ -34,7 +34,7 @@ class DuelingNet(nn.Module, BaseNet):
         value = self.fc_value(phi)
         advantange = self.fc_advantage(phi)
         q = value.expand_as(advantange) + (advantange - advantange.mean(1, keepdim=True).expand_as(advantange))
-        return q
+        return dict(q=q)
 
 
 class CategoricalNet(nn.Module, BaseNet):
@@ -51,7 +51,39 @@ class CategoricalNet(nn.Module, BaseNet):
         pre_prob = self.fc_categorical(phi).view((-1, self.action_dim, self.num_atoms))
         prob = F.softmax(pre_prob, dim=-1)
         log_prob = F.log_softmax(pre_prob, dim=-1)
-        return prob, log_prob
+        return dict(prob=prob, log_prob=log_prob)
+
+
+class RainbowNet(nn.Module, BaseNet):
+    def __init__(self, action_dim, num_atoms, body, noisy_linear):
+        super(RainbowNet, self).__init__()
+        if noisy_linear:
+            self.fc_value = NoisyLinear(body.feature_dim, num_atoms)
+            self.fc_advantage = NoisyLinear(body.feature_dim, action_dim * num_atoms)
+        else:
+            self.fc_value = layer_init(nn.Linear(body.feature_dim, num_atoms))
+            self.fc_advantage = layer_init(nn.Linear(body.feature_dim, action_dim * num_atoms))
+
+        self.action_dim = action_dim
+        self.num_atoms = num_atoms
+        self.body = body
+        self.noisy_linear = noisy_linear
+        self.to(Config.DEVICE)
+
+    def reset_noise(self):
+        if self.noisy_linear:
+            self.fc_value.reset_noise()
+            self.fc_advantage.reset_noise()
+            self.body.reset_noise()
+
+    def forward(self, x):
+        phi = self.body(tensor(x))
+        value = self.fc_value(phi).view((-1, 1, self.num_atoms))
+        advantage = self.fc_advantage(phi).view(-1, self.action_dim, self.num_atoms)
+        q = value + (advantage - advantage.mean(1, keepdim=True))
+        prob = F.softmax(q, dim=-1)
+        log_prob = F.log_softmax(q, dim=-1)
+        return dict(prob=prob, log_prob=log_prob)
 
 
 class QuantileNet(nn.Module, BaseNet):
@@ -67,7 +99,7 @@ class QuantileNet(nn.Module, BaseNet):
         phi = self.body(tensor(x))
         quantiles = self.fc_quantiles(phi)
         quantiles = quantiles.view((-1, self.action_dim, self.num_quantiles))
-        return quantiles
+        return dict(quantile=quantiles)
 
 
 class OptionCriticNet(nn.Module, BaseNet):
@@ -134,7 +166,7 @@ class DeterministicActorCriticNet(nn.Module, BaseNet):
         return torch.tanh(self.fc_action(self.actor_body(phi)))
 
     def critic(self, phi, a):
-        return self.fc_critic(self.critic_body(phi, a))
+        return self.fc_critic(self.critic_body(torch.cat([phi, a], dim=1)))
 
 
 class GaussianActorCriticNet(nn.Module, BaseNet):
@@ -178,9 +210,9 @@ class GaussianActorCriticNet(nn.Module, BaseNet):
             action = dist.sample()
         log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
         entropy = dist.entropy().sum(-1).unsqueeze(-1)
-        return {'a': action,
+        return {'action': action,
                 'log_pi_a': log_prob,
-                'ent': entropy,
+                'entropy': entropy,
                 'mean': mean,
                 'v': v}
 
@@ -219,9 +251,9 @@ class CategoricalActorCriticNet(nn.Module, BaseNet):
             action = dist.sample()
         log_prob = dist.log_prob(action).unsqueeze(-1)
         entropy = dist.entropy().unsqueeze(-1)
-        return {'a': action,
+        return {'action': action,
                 'log_pi_a': log_prob,
-                'ent': entropy,
+                'entropy': entropy,
                 'v': v}
 
 
