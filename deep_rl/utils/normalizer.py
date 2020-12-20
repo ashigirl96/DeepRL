@@ -50,6 +50,7 @@ class MeanStdNormalizer(BaseNormalizer):
         self.rms.mean = saved['mean']
         self.rms.var = saved['var']
 
+
 class RescaleNormalizer(BaseNormalizer):
     def __init__(self, coef=1.0):
         BaseNormalizer.__init__(self)
@@ -69,3 +70,21 @@ class ImageNormalizer(RescaleNormalizer):
 class SignNormalizer(BaseNormalizer):
     def __call__(self, x):
         return np.sign(x)
+
+
+class DiscrezeNormalizer(BaseNormalizer):
+    def __init__(self, observation_space, discrete=6):
+        BaseNormalizer.__init__(self, False)
+        self.observation_space = observation_space
+        self.discrete = discrete
+
+    def __call__(self, x):
+        x = np.asarray(x)
+        if x.ndim == 2 and x.shape[0] == 1:
+            x = x[0]
+        bins = [np.linspace(low, high, self.discrete + 1)[1:-1] for low, high in
+                zip(self.observation_space.low, self.observation_space.high)]
+        digitize_x = [np.digitize(o, bins=bin_) for o, bin_ in zip(x, bins)]
+        int_x = np.sum([observation * (self.discrete ** i) for i, observation in
+                             enumerate(digitize_x)])
+        return int_x

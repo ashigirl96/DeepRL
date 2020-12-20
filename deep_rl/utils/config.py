@@ -66,6 +66,7 @@ class Config:
         self.shared_repr = False
         self.noisy_linear = False
         self.n_step = 1
+        self.game = ""
 
     @property
     def eval_env(self):

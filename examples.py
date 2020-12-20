@@ -7,6 +7,22 @@
 from deep_rl import *
 
 
+# Q-learning
+def q_learning(**kwargs):
+    generate_tag(kwargs)
+    config = Config()
+    config.merge(kwargs)
+
+    config.task_fn = lambda: Task(config.game)
+    config.eval_env = config.task_fn()
+    config.save_interval = 0
+    config.discount = 0.99
+    config.eval_interval = int(5e3)
+    config.max_steps = 1e5
+    config.state_normalizer = DiscrezeNormalizer(config.eval_env.observation_space)
+    run_steps(QAgent(config))
+
+
 # DQN
 def dqn_feature(**kwargs):
     generate_tag(kwargs)
@@ -660,8 +676,9 @@ if __name__ == '__main__':
     select_device(-1)
     # select_device(0)
 
-    game = 'CartPole-v0'
-    # dqn_feature(game=game, n_step=1, replay_cls=UniformReplay, async_replay=True, noisy_linear=True)
+    game = 'CartPole-v1'
+    q_learning(game=game)
+    # dqn_feature(game=game)
     # quantile_regression_dqn_feature(game=game)
     # categorical_dqn_feature(game=game)
     # rainbow_feature(game=game)
@@ -675,7 +692,7 @@ if __name__ == '__main__':
     # ppo_continuous(game=game)
     # ddpg_continuous(game=game)
     # td3_continuous(game=game)
-    sac_continuous(game=game)
+    # sac_continuous(game=game)
 
     game = 'BreakoutNoFrameskip-v4'
     dqn_pixel(game=game, n_step=1, replay_cls=UniformReplay, async_replay=False)
